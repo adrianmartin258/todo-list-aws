@@ -6,6 +6,23 @@ import sys
 import os
 import json
 
+
+@mock_dynamodb
+def add_client_exception_to_moto(self):
+    print ('Start: add_client_exception_to_moto')
+
+    from src.todoList import get_table
+    from unittest.mock import Mock
+    from botocore.exceptions import ClientError
+    
+    self.table = get_table(self.dynamodb)
+    self.table = Mock()    
+    
+    self.dbException = ClientError({'Error': {'Code': 'MockedException', 'Message': 'Prueba'}},
+        os.environ['DYNAMODB_TABLE'])
+    
+    print ('End: add_client_exception_to_moto')
+
 @mock_dynamodb
 class TestDatabaseFunctions(unittest.TestCase):
     def setUp(self):
@@ -57,6 +74,16 @@ class TestDatabaseFunctions(unittest.TestCase):
         #self.assertIn('todoTable', self.table_local.name)
         print ('End: test_table_exists')
         
+    def test_get_table(self):
+        print ('---------------------')
+        print ('Start: test_get_table')
+        from src.todoList import get_table
+        table = get_table()
+        tableName = os.environ['DYNAMODB_TABLE'];
+        # check if the table name is 'ToDo'
+        self.assertEqual(tableName, table.name)
+        print ('End: test_get_table')
+    
 
     def test_put_todo(self):
         print ('---------------------')
@@ -173,6 +200,18 @@ class TestDatabaseFunctions(unittest.TestCase):
                 "",
                 self.dynamodb))
         print ('End: atest_update_todo_error')
+        
+    def test_get_todo_exception(self):
+        print ('---------------------')
+        print ('Start: test_get_todo_exception')
+        #from src.todoList import get_table
+        from src.todoList import get_item        
+        
+        add_client_exception_to_moto(self)         
+        self.table.get_item.side_effect = self.dbException
+        self.assertRaises(Exception, get_item("", self.dynamodb))
+
+        print ('End: test_get_todo_exception')
 
     def test_delete_todo(self):
         print ('---------------------')
